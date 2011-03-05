@@ -3,3 +3,7 @@
 A gem to help with serializing activerecord instances as Restful resources, including hrefs.
 
 Currently just produces JSON.
+
+== Status
+
+Incomplete.
