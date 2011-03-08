@@ -5,8 +5,8 @@ require 'spec'
 require 'spec/autorun'
 require 'pp'
 
-#require 'database'
-#
+require 'database'
+
 #class TestLogger
 #  [:debug, :info, :warn, :error].each do |m|
 #    define_method(m) { |message| puts "#{m.to_s.upcase}: #{message}" }

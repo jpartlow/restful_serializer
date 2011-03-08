@@ -1,27 +1,76 @@
-# This file is part of Restful.  Copyright 2011 Joshua Partlow.  This is free software, see the LICENSE file for details.
+# This file is part of restful_serializer.  Copyright 2011 Joshua Partlow.  This is free software, see the LICENSE file for details.
 require 'active_support'
 require 'restful/serializer'
 
 # This library is used to decorate ActiveRecord with methods to assist in generating 
 # Restful content for Web Services.
 #
-# Currently it assumes JSON.
+# It produces a hash of reference, object and href information for an ActiveRecord instance
+# or association.  Output is highly configurable both through Rails initialization and
+# method calls.
+#
+# = Options
+#
+# * :name => method to call on an instance to produce a human meaningful reference for the instance.
+#   Defaults to :name.
+# * :serialization => options to be passed to ActiveRecord::Serialization::Serializer to configure
+#   serialization of the ActiveRecord instance itself.  See ActiveRecord::Serialization.to_json
+# * :url_for => if the named_route helper method cannot be guessed from normal Rails restful
+#   syntax, it may be overriden here.
+# * :associations => you may include href references to the instance's associations
+# * :shallow => if you are serializing an association, by default member includes and association 
+#   references are stripped.  Set this to false to traverse deeply.
 #
 # = Usage
 #
-#   # :name => :string
+#   # :first_name => :string
+#   # :last_name => :string
 #   # :age  => :int
+#   # :secrets => :string
 #   class Person < ActiveRecord::Base
-#
-#     restful 
-#
+#     has_many :books
+#  
+#     def name
+#       "#{first_name} #{last_name}"
+#     end
 #   end
 #
-#   inst = Person.new(:name => 'Bob', :age => 41)
-#   inst.id # => 1
-#   inst.to_href # => 'http://www.example.com/people/1'
-#   inst.to_json(:restful => true)
-#   # => "{ 'person' : { 'id' : 1, 'name' : 'Bob', 'age' : 17, 'href' : 'http://www.example.com/web_service/people/1' } }"
+#   # :title => :string
+#   # :pages => :int
+#   # :person_id => :int
+#   class Book < ActiveRecord::Base
+#     belongs_to :person
+#   end
+#
+#   ActionController::Routing::Routes.draw do |map|
+#     map.resources :people do |people|
+#       people.resources :books
+#     end 
+#   end
+#
+#   Restful.model_configuration = {
+#     :person => {
+#       :serialization => { :except => :secrets }
+#       :associations => :books,
+#     }
+#     :book => {
+#       :name => :title,
+#       :associations => :person,
+#     }
+#   }
+#
+#   bob = Person.new(:first_name => 'Bob', :last_name => 'Smith', :age => 41, :secrets => 'untold')
+#   bob.restful
+#   # => { 
+#   #   'name' => 'Bob Smith'
+#   #   'person' => { 
+#   #      'id' => 1,
+#   #      'first_name' => 'Bob',
+#   #      'last_name' => 'Bob',
+#   #      'age' : 17,
+#   #   'href' => 'http://www.example.com/web_service/people/1' }
+#   #   'books_href' => 'http://www.example.com/web_service/people/1/books' }
+#   # }
 #
 module Restful
   # Route prefix for api calls.
@@ -54,5 +103,12 @@ module Restful
       Restful::Serializer.new(self, *args).serialize
     end
   end
+
+  module AssociationExtensions
+    def restful(*args)
+      Restful::Serializer.new(self, *args).serialize
+    end
+  end
 end
 ActiveRecord::Base.send(:include, Restful::Extensions)
+ActiveRecord::Associations::AssociationProxy.send(:include, Restful::AssociationExtensions)
