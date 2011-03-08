@@ -3,15 +3,53 @@ require 'active_record'
 require 'action_controller'
 
 module Restful
+  module UrlForHelpers
+
+    # Used to construct and attempt to call named routes be providing resource strings out
+    # of which an named route method name will be constructed:
+    #
+    # Options:
+    #
+    # * :resources => a symbol, string or array of same describing segments of the helper method name.
+    #   e.g. [:user, :comments] => user_comments (to which _url will be appended...)
+    # * :method => overrides the use of :resources and :prefix
+    # * :args => any arguments to be passed to the named_route when it is called
+    #
+    # = Example
+    #
+    #   get_url_for(:resources => [:user, :comments], :args => 1)
+    #   # => send("#{Restful.api_prefix}_user_comments_url", 1)
+    #   # which if it exists is likely to return something like:
+    #   # "http://example.com/user/1/comments"
+    #
+    def get_url_for(options)
+      url_for = [options[:method], 'url'] if options.include?(:method)
+      url_for ||= [Restful.api_prefix, options[:resources], 'url'].flatten.compact
+      url_for = url_for.join('_').downcase
+      send(url_for, *Array(options[:args])) if respond_to?(url_for) 
+    end
+
+  end
+
   class Serializer
     include ActionController::UrlWriter
-    attr_accessor :subject, :klass, :options, :shallow
+    include UrlForHelpers
+    attr_accessor :subject, :base_klass, :klass, :options, :shallow
   
     def initialize(subject, *args)
       self.subject = subject
-      local_options = args.pop || {}
-      self.options = Restful.model_configuration_for(subject).merge(local_options.symbolize_keys)
-      self.klass = (options[:class] || subject.class.name).to_s.underscore
+
+      self.base_klass = subject.class.base_class.name.underscore if subject.class.respond_to?(:base_class)
+      self.klass = subject.class.name.underscore
+
+      passed_options = (args.pop || {}).symbolize_keys
+      base_options = Restful.model_configuration_for(base_klass) || {}
+      class_options = Restful.model_configuration_for(klass) || {}
+      self.options = (klass == base_klass || class_options[:no_inherited_options]) ? 
+        class_options : 
+        base_options.merge(class_options)
+      self.options.merge!(passed_options)
+
       self.shallow = options[:shallow]
     end
   
@@ -52,10 +90,9 @@ module Restful
 
     def href 
       unless @href
-        url_for = [options[:url_for], 'url'] if options.include?(:url_for)
-        url_for ||= [Restful.api_prefix,klass,'url']
-        url_for = url_for.compact.join('_').downcase
-        @href = send(url_for, subject.id) if respond_to?(url_for)
+        @href = get_url_for(:method => options[:url_for], :args => subject.id) if options.include?(:url_for)
+        @href = get_url_for(:resources => klass, :args => subject.id) unless @href
+        @href = get_url_for(:resources => base_klass, :args => subject.id) unless @href || base_klass == klass
       end
       return @href
     end
@@ -85,15 +122,6 @@ module Restful
     end
   end
 
-  module UrlForHelpers
-
-    def get_url_for(name_elements, *args)
-      url_for = [Restful.api_prefix,name_elements,'url'].flatten.compact.join('_').downcase
-      send(url_for, *args) if respond_to?(url_for) 
-    end
-
-  end
-
   # Handle for information about an ActiveRecord association.
   class Association
     include ActionController::UrlWriter
@@ -114,7 +142,7 @@ module Restful
 
     def href
       if singular?
-        href = get_url_for(association_name, subject.send(association.name).id)
+        href = get_url_for(:resources => association_name, :args => subject.send(association.name).id)
       else
         href = collective_href
       end
@@ -123,8 +151,8 @@ module Restful
 
     def collective_href
       # try url_for nested resources first
-      unless href = get_url_for([subject_klass, association_name], subject.id)
-        href = get_url_for(association_name)
+      unless href = get_url_for(:resources => [subject_klass, association_name], :args => subject.id)
+        href = get_url_for(:resources => association_name)
       end
       return href 
     end

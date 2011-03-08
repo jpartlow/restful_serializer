@@ -11,6 +11,9 @@ require 'restful/serializer'
 #
 # = Options
 #
+# The following options may be set in the Restful.model_configuration hash on a per model class
+# basis.
+#
 # * :name => method to call on an instance to produce a human meaningful reference for the instance.
 #   Defaults to :name.
 # * :serialization => options to be passed to ActiveRecord::Serialization::Serializer to configure
@@ -20,6 +23,9 @@ require 'restful/serializer'
 # * :associations => you may include href references to the instance's associations
 # * :shallow => if you are serializing an association, by default member includes and association 
 #   references are stripped.  Set this to false to traverse deeply.
+# * :no_inherited_options => normally a subclass inherits and overrides its base class settings.
+#   Setting this to true prevents this so that only the options specifically set for the class
+#   will be used.  Default false.
 #
 # = Usage
 #

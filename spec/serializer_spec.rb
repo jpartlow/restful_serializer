@@ -7,6 +7,7 @@ ActionController::Routing::Routes.draw do |map|
   map.resources :bars do |bars|
     bars.resources :dingos
   end 
+  map.resources :things
 end
 
 describe Restful::Serializer do
@@ -32,6 +33,9 @@ describe Restful::Serializer do
     belongs_to :bar
   end
 
+  class Thing < ActiveRecord::Base; end
+  class Sub < Thing; end
+
   def generate_instances
     @foo = Foo.create!(:name => 'A foo')
     @bar1 = Bar.create!(:name => 'The bar1', :foo => @foo)
@@ -54,6 +58,11 @@ describe Restful::Serializer do
       conn.create_table(:dingos, :force => true) do |t|
         t.string :name
         t.references :bar
+      end
+      conn.create_table(:things, :force => true) do |t|
+        t.string :name
+        t.string :type 
+        t.string :secret
       end
     end 
   end
@@ -175,6 +184,31 @@ describe Restful::Serializer do
       }
     end
 
+  end
+
+  describe "with subclasses" do
+    
+    before(:each) do
+      Restful.model_configuration = {
+        :thing => {
+          :serialization => { :except => :secret }
+        }
+      }
+      @thing = Thing.create!(:name => 'a thing', :secret => 'a secret')
+      @sub = Sub.create!(:name => 'a sub thing', :secret => 'another secret')
+    end
+
+    it "should pull superclass configuration up into a subclass serialization" do
+      rs = Restful::Serializer.new(@sub)
+      rs.serialize.should == {
+        'name' => @sub.name,
+        'href' => "http://test.org/things/#{@sub.id}",
+        'sub' => {
+          'id' => @sub.id,
+          'name' => @sub.name,
+        }  
+      }
+    end
   end
 
   describe "with arrays" do
