@@ -101,7 +101,7 @@ module Restful
       else
         model_configuration[key.class.name.underscore.to_sym]
     end
-    return config || {} 
+    return Marshal.load(Marshal.dump(config)) || {} # deep clone or empty
   end
 
   module Extensions

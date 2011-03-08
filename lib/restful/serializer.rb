@@ -62,7 +62,7 @@ module Restful
     end
 
     def active_record_serialization_options
-      ar_options = (options[:serialization] || {}).dup
+      ar_options = (options[:serialization] || {}).clone
       ar_options.delete(:include) if shallow 
       return ar_options
     end
@@ -114,7 +114,7 @@ module Restful
 
     def _serialize_array
       restful = subject.map do |e|
-        array_options = options.dup
+        array_options = options.clone
         array_options.merge!(:shallow => true) unless array_options.include?(:shallow)
         Serializer.new(e, array_options).serialize
       end 

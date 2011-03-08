@@ -51,5 +51,22 @@ describe Restful do
       Restful.model_configuration_for(FooBar.new).should == :foo_bar_config
     end
 
+    describe "with deep structures" do
+
+      before(:each) do
+        Restful.model_configuration = {
+          :foo => { :setting => {:with => :nested_hash } }
+        }
+      end
+
+      it "should provide deep clones of model_configuration elements" do
+        config = Restful.model_configuration_for(:foo)
+        config[:setting][:with] = "changed"
+        Restful.model_configuration.should == {
+          :foo => { :setting => {:with => :nested_hash } }
+        } 
+      end
+
+    end
   end
 end
