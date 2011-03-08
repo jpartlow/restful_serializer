@@ -103,7 +103,7 @@ module Restful
       restful = {
         klass => ActiveRecord::Serialization::Serializer.new(subject, active_record_serialization_options).serializable_record,
       }
-      restful['name'] = name
+      restful['name'] = name if name
       restful['href'] = href
       associations.each do |association|
         restful["#{association.name}_href"] = association.href 
