@@ -2,8 +2,74 @@
 
 A gem to help with serializing activerecord instances as Restful resources, including hrefs.
 
-Currently just produces JSON.
+If the model has a name column, it will be used to describe the resource.
 
-== Status
+This library does not attempt to provide href info for transitions, or deal much with questions of authorization beyond what is specified in the serialization configuration lines.  It assumes that these issues would be resolved in the controller.  It assumes standard naming conventions for routes.
 
-Incomplete.
+So far only tested with Rails 2.x
+
+== Example 
+
+Models:
+
+  # Columns:
+  #  name
+  #  column1
+  #  column2
+  #  secret
+  class Foo < ActiveRecord::Base
+    has_many :bars
+  end
+
+  # Columns:
+  #  bar1
+  #  bar2
+  #  system
+  class Bar < ActiveRecord::Base
+    has_one :foo
+  end
+
+Example configuration (config/initializers/restful.rb:
+
+  # url prefix for calls to the web service
+  Restful.api_prefix = 'client_api'
+  Restful.model_configuration = {
+    # This configuration provides information which anyone authorized to see a
+    # given object at the most basic level should be able to see.
+  
+    # Note: it is advisable to set :serialization => :only for all models, so that
+    # new attributes do not automatically become available through the api.
+  
+    :foo => {
+      :serialization => {
+        :only => [:id, :column1, :column2],
+      },
+      :associations => {:bars => nil}
+    },
+    :bar => {
+      :serialization => {
+        :only => [:id, :bar1, :bar2],
+        :include => {
+          :foo => { :only => [:column1] }
+        },
+      }
+      :associations => {:foo => nil}
+    }
+  }
+
+Note that the serialization configuration is the same which you would normally pass to ActiveRecord::Serialization (in a model.to_json call, for instance).
+
+Example output:
+
+  foo = Foo.create(:name => 'A foo', :column1 => 1, :column2 => 2, :secret => "very secret")
+  pp foo.restful
+  # =>
+  # {"href"=>"http://test.app/client_api/foos/1",
+  #  "name"=>"A foo",
+  #  "bars_href"=>"http://test.app/client_api/foos/1/bars",
+  #  "foo"=>
+  #   {"id"=>1,
+  #    "name"=>"A foo",
+  #    "column1"=>1,
+  #    "column2"=>2,}}
+
