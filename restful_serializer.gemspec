@@ -27,4 +27,5 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency(%q<activerecord>, [">= 2.1.0", "<3.0.0"])
   s.add_runtime_dependency(%q<activesupport>, [">= 2.1.0", "<3.0.0"])
   s.add_runtime_dependency(%q<actionpack>, [">= 2.1.0", "<3.0.0"])
+  s.add_runtime_dependency(%q<deep_merge>, [">= 0.1.0"])
 end

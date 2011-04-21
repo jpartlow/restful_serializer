@@ -140,6 +140,20 @@ describe Restful::Serializer do
       }
     end
 
+    it "should deeply merge overridden options" do
+      rs = Restful::Serializer.new(@foo, 
+        :deep_merge => { :serialization => { :only => [:id] } }
+      )
+      rs.serialize.should == {
+        'name' => @foo.fancy_name,
+        'foo' => { 
+          'id' => @foo.id,
+          'name' => @foo.name,
+          :a_method => @foo.a_method,
+        },
+        'href' => "http://test.org/prefix/foos/#{@foo.id}",
+      }
+    end
   end
 
   describe "with associations" do
@@ -183,7 +197,6 @@ describe Restful::Serializer do
         'special_href' => "http://test.org/foos/#{@bar1.foo_id}",
       }
     end
-
   end
 
   describe "with subclasses" do
@@ -218,7 +231,7 @@ describe Restful::Serializer do
           :associations => :bars,
         },
         :bar => {
-          :serialization => { :only => :name, :include => { :dingos => { :only =>  [ :name, :id] } } },
+          :serialization => { :only => [:name], :include => { :dingos => { :only =>  [ :name, :id] } } },
           :associations => [:foo, :dingos],
         },
       }
@@ -273,6 +286,52 @@ describe Restful::Serializer do
           'href' => "http://test.org/bars/#{@bar2.id}",
           'dingos_href' => "http://test.org/bars/#{@bar2.id}/dingos",
           'foo_href' => "http://test.org/foos/#{@bar2.foo_id}",
+        },
+      ] 
+    end
+
+    it "should override options during initialization for each member" do
+      rs = Restful::Serializer.new(@foo.bars, 
+        :serialization => { :only => :id } 
+      )
+      rs.serialize.should == [
+        {
+          'name' => @bar1.name,
+          'href' => "http://test.org/bars/#{@bar1.id}",
+          'bar'  =>  {
+            'id' => @bar1.id,
+          },
+        },
+        {
+          'name' => @bar2.name,
+          'href' => "http://test.org/bars/#{@bar2.id}",
+          'bar'  =>  {
+            'id' => @bar2.id,
+          },
+        },
+      ] 
+    end
+
+    it "should deeply merge overridden options for each member" do
+      rs = Restful::Serializer.new(@foo.bars, 
+        :deep_merge => { :serialization => { :only => [:id] } }
+      )
+      rs.serialize.should == [
+        {
+          'name' => @bar1.name,
+          'href' => "http://test.org/bars/#{@bar1.id}",
+          'bar'  =>  {
+            'id' => @bar1.id,
+            'name' => @bar1.name,
+          },
+        },
+        {
+          'name' => @bar2.name,
+          'href' => "http://test.org/bars/#{@bar2.id}",
+          'bar'  =>  {
+            'id' => @bar2.id,
+            'name' => @bar2.name,
+          },
         },
       ] 
     end

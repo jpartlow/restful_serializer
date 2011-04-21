@@ -1,6 +1,7 @@
 # This file is part of restful_serializer.  Copyright 2011 Joshua Partlow.  This is free software, see the LICENSE file for details.
 require 'active_record'
 require 'action_controller'
+require 'deep_merge'
 
 module Restful
   module UrlForHelpers
@@ -44,12 +45,19 @@ module Restful
       self.klass = subject.class.name.demodulize.underscore
 
       passed_options = (args.pop || {}).symbolize_keys
-      base_options = Restful.model_configuration_for(base_klass) || {}
-      class_options = Restful.model_configuration_for(klass) || {}
-      self.options = (klass == base_klass || class_options[:no_inherited_options]) ? 
-        class_options : 
-        base_options.merge(class_options)
-      self.options.merge!(passed_options)
+      if subject.kind_of?(Array)
+        # preserve options as is to be passed to array members
+        self.options = passed_options
+      else
+        deeply_merge = passed_options.delete(:deep_merge)
+        base_options = Restful.model_configuration_for(base_klass) || {}
+        class_options = Restful.model_configuration_for(klass) || {}
+        self.options = (klass == base_klass || class_options[:no_inherited_options]) ? 
+          class_options : 
+          base_options.merge(class_options)
+        self.options.merge!(passed_options)
+        self.options.deep_merge(deeply_merge) if deeply_merge
+      end
 
       self.shallow = options[:shallow]
     end

@@ -58,7 +58,7 @@ require 'restful/serializer'
 #
 #   Restful.model_configuration = {
 #     :person => {
-#       :serialization => { :except => :secrets }
+#       :serialization => { :except => [:secrets] }
 #       :associations => :books,
 #     }
 #     :book => {
@@ -76,10 +76,48 @@ require 'restful/serializer'
 #   #      'first_name' => 'Bob',
 #   #      'last_name' => 'Bob',
 #   #      'age' : 17,
+#   #   },
 #   #   'href' => 'http://www.example.com/web_service/people/1' }
 #   #   'books_href' => 'http://www.example.com/web_service/people/1/books' }
 #   # }
 #
+# Options may be overridden at call time, by default this overwrite the passed options completely:
+#  
+#   bob = Person.new(:first_name => 'Bob', :last_name => 'Smith', :age => 41, :secrets => 'untold')
+#   bob.restful(:serialization => { :except => [:id] })
+#   # => { 
+#   #   'name' => 'Bob Smith'
+#   #   'person' => { 
+#   #      'first_name' => 'Bob',
+#   #      'last_name' => 'Bob',
+#   #      'age' : 17,
+#   #      'secrets' : 'untold',
+#   #   },
+#   #   'href' => 'http://www.example.com/web_service/people/1' }
+#   #   'books_href' => 'http://www.example.com/web_service/people/1/books' }
+#   # }
+#
+# To perform a deep merge of options instead, place the options to be deeply merged
+# inside a :deep_merge hash:
+#
+#   bob = Person.new(:first_name => 'Bob', :last_name => 'Smith', :age => 41, :secrets => 'untold')
+#   bob.restful(:deep_merge => { :serialization => { :except => [:id] } })
+#   # => { 
+#   #   'name' => 'Bob Smith'
+#   #   'person' => { 
+#   #      'first_name' => 'Bob',
+#   #      'last_name' => 'Bob',
+#   #      'age' : 17,
+#   #   },
+#   #   'href' => 'http://www.example.com/web_service/people/1' }
+#   #   'books_href' => 'http://www.example.com/web_service/people/1/books' }
+#   # }
+#
+# These two techniques can be combined, but overwriting will occur prior to a deep merge...
+#
+# (There is a trap in how deep merge handles this.  If the above :except values had
+# not been configured as arrays, then deep merge would have overwritten rather than merging
+# them.  This could probably be adjusted with a closer look into the deep_merge docs.)
 module Restful
   # Route prefix for api calls.
   mattr_accessor :api_prefix

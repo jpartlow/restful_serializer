@@ -73,3 +73,6 @@ Example output:
   #    "column1"=>1,
   #    "column2"=>2,}}
 
+= More Docs
+
+Please see the Restful rdoc and the specs for more details.
