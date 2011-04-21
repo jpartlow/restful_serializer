@@ -5,27 +5,29 @@ require 'restful/serializer'
 # This library is used to decorate ActiveRecord with methods to assist in generating 
 # Restful content for Web Services.
 #
-# It produces a hash of reference, object and href information for an ActiveRecord instance
-# or association.  Output is highly configurable both through Rails initialization and
-# method calls.
+# It produces a hash of reference, object and href information for an
+# ActiveRecord instance or association.  Output is highly configurable both
+# through Rails initialization and method calls.
 #
 # = Options
 #
-# The following options may be set in the Restful.model_configuration hash on a per model class
-# basis.
+# The following options may be set in the Restful.model_configuration hash on a
+# per model class basis.
 #
-# * :name => method to call on an instance to produce a human meaningful reference for the instance.
-#   Defaults to :name.
-# * :serialization => options to be passed to ActiveRecord::Serialization::Serializer to configure
-#   serialization of the ActiveRecord instance itself.  See ActiveRecord::Serialization.to_json
-# * :url_for => if the named_route helper method cannot be guessed from normal Rails restful
-#   syntax, it may be overriden here.
+# * :name => method to call on an instance to produce a human meaningful
+#   reference for the instance.  Defaults to :name.
+# * :serialization => options to be passed to
+#   ActiveRecord::Serialization::Serializer to configure serialization of the
+#   ActiveRecord instance itself.  See ActiveRecord::Serialization.to_json
+# * :url_for => if the named_route helper method cannot be guessed from normal
+#   Rails restful syntax, it may be overriden here.
 # * :associations => you may include href references to the instance's associations
-# * :shallow => if you are serializing an association, by default member includes and association 
-#   references are stripped.  Set this to false to traverse deeply.
-# * :no_inherited_options => normally a subclass inherits and overrides its base class settings.
-#   Setting this to true prevents this so that only the options specifically set for the class
-#   will be used.  Default false.
+# * :shallow => if you are serializing an association, by default member
+#   includes and association references are stripped.  Set this to false to
+#   traverse deeply.
+# * :no_inherited_options => normally a subclass inherits and overrides its
+#   base class settings.  Setting this to true prevents this so that only the
+#   options specifically set for the class will be used.  Default false.
 #
 # = Usage
 #

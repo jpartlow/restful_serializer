@@ -5,13 +5,14 @@ require 'action_controller'
 module Restful
   module UrlForHelpers
 
-    # Used to construct and attempt to call named routes be providing resource strings out
-    # of which an named route method name will be constructed:
+    # Used to construct and attempt to call named routes be providing resource
+    # strings out of which a named route method name will be constructed:
     #
     # Options:
     #
-    # * :resources => a symbol, string or array of same describing segments of the helper method name.
-    #   e.g. [:user, :comments] => user_comments (to which _url will be appended...)
+    # * :resources => a symbol, string or array of same describing segments of
+    #   the helper method name.  e.g. [:user, :comments] => user_comments (to
+    #   which _url will be appended...)
     # * :method => overrides the use of :resources and :prefix
     # * :args => any arguments to be passed to the named_route when it is called
     #
@@ -39,8 +40,8 @@ module Restful
     def initialize(subject, *args)
       self.subject = subject
 
-      self.base_klass = subject.class.base_class.name.underscore if subject.class.respond_to?(:base_class)
-      self.klass = subject.class.name.underscore
+      self.base_klass = subject.class.base_class.name.demodulize.underscore if subject.class.respond_to?(:base_class)
+      self.klass = subject.class.name.demodulize.underscore
 
       passed_options = (args.pop || {}).symbolize_keys
       base_options = Restful.model_configuration_for(base_klass) || {}
