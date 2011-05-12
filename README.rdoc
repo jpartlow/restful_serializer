@@ -6,7 +6,7 @@ If the model has a name column, it will be used to describe the resource.
 
 This library does not attempt to provide href info for transitions, or deal much with questions of authorization beyond what is specified in the serialization configuration lines.  It assumes that these issues would be resolved in the controller.  It assumes standard naming conventions for routes.
 
-So far only tested with Rails 2.1.0
+Tested with Rails 2.3.11.  Requires the Rails framework to be loaded.
 
 == Example 
 

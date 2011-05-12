@@ -1,12 +1,11 @@
 # This file is part of restful_serializer.  Copyright 2011 Joshua Partlow.  This is free software, see the LICENSE file for details.
-require 'active_record'
-require 'action_controller'
 require 'deep_merge'
 
 module Restful
+
   module UrlForHelpers
 
-    # Used to construct and attempt to call named routes be providing resource
+    # Used to construct and attempt to call named routes by providing resource
     # strings out of which a named route method name will be constructed:
     #
     # Options:
@@ -37,7 +36,18 @@ module Restful
     include ActionController::UrlWriter
     include UrlForHelpers
     attr_accessor :subject, :base_klass, :klass, :options, :shallow
-  
+ 
+    class << self
+
+      alias_method :serializer_default_url_options=, :default_url_options= 
+      # Set ActionController::UrlWriter.default_url_options for all Serializer
+      # actions.
+      def default_url_options=(options)
+        self.serializer_default_url_options = options
+        Association.default_url_options = options
+      end
+    end
+ 
     def initialize(subject, *args)
       self.subject = subject
 

@@ -1,12 +1,14 @@
 $LOAD_PATH.unshift(File.dirname(__FILE__))
 $LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', 'lib'))
 require 'rubygems'
-require 'restful'
+require 'action_controller'
+require 'database'
+
 require 'spec'
 require 'spec/autorun'
 require 'pp'
 
-require 'database'
+require 'restful'
 
 #class TestLogger
 #  [:debug, :info, :warn, :error].each do |m|

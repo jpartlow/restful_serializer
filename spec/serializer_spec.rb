@@ -1,5 +1,6 @@
 require File.expand_path(File.join(File.dirname(__FILE__), 'spec_helper'))
 
+ActionController::Routing::Routes.clear!
 ActionController::Routing::Routes.draw do |map|
   map.resources :foos
   map.prefix_foo 'prefix/foos/:id', :controller => 'foos', :action => 'show'
@@ -11,7 +12,6 @@ ActionController::Routing::Routes.draw do |map|
 end
 
 describe Restful::Serializer do
-
   class Foo < ActiveRecord::Base
     has_many :bars
     def fancy_name
@@ -77,6 +77,18 @@ describe Restful::Serializer do
     Restful.model_configuration = {}
   end
 
+  it "should not interfere with resource route generation" do
+    ActionController::Routing::Routes.routes.size.should == 30
+    by_method = ActionController::Routing::Routes.routes.group_by { |r|
+      r.conditions[:method]
+    }
+    by_method[:get].size.should == 4 * 4
+    by_method[:put].size.should == 4
+    by_method[:post].size.should == 4
+    by_method[:delete].size.should == 4
+    by_method[nil].size.should == 2
+  end
+
   it "should require a subject" do
     lambda { Restful::Serializer.new }.should raise_error(ArgumentError)
     Restful::Serializer.new('foo').should be_kind_of(Restful::Serializer)
@@ -85,6 +97,14 @@ describe Restful::Serializer do
   it "should set klass" do
     rs = Restful::Serializer.new(@foo)
     rs.klass.should == 'foo'
+  end
+
+  it "should set default url options" do
+    Restful::Serializer.default_url_options.should == { :host => 'test.org' }
+    Restful::Association.default_url_options.should == { :host => 'test.org' }
+    Restful::Serializer.default_url_options = opts = { :host => 'foo' }
+    Restful::Serializer.default_url_options.should == opts
+    Restful::Association.default_url_options.should == opts
   end
 
   it "should serialize" do

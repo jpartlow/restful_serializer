@@ -1,6 +1,4 @@
 # This file is part of restful_serializer.  Copyright 2011 Joshua Partlow.  This is free software, see the LICENSE file for details.
-require 'active_support'
-require 'restful/serializer'
 
 # This library is used to decorate ActiveRecord with methods to assist in generating 
 # Restful content for Web Services.
@@ -119,6 +117,10 @@ require 'restful/serializer'
 # not been configured as arrays, then deep merge would have overwritten rather than merging
 # them.  This could probably be adjusted with a closer look into the deep_merge docs.)
 module Restful
+  # Requiring Serializer (and hence action_controller for UrlWriter) was interferring with
+  # route generation somehow, so instead we are letting it autoload if used.
+  autoload :Serializer, 'restful/serializer'
+
   # Route prefix for api calls.
   mattr_accessor :api_prefix
 
