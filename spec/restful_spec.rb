@@ -8,6 +8,10 @@ describe Restful do
     Restful.api_prefix.should == 'foo'
   end
 
+  it "should have a default_url_options accessor" do
+    Restful.default_url_options.should == {}
+  end
+
   it "should have a model_configuration accessor" do
     Restful.model_configuration.should == {}
   end

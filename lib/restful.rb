@@ -124,6 +124,11 @@ module Restful
   # Route prefix for api calls.
   mattr_accessor :api_prefix
 
+  # Default url options for ActionController::UrlWriter.
+  # (Generally you must provide {:host => 'example.com'})
+  mattr_accessor :default_url_options
+  self.default_url_options = {}
+
   # Hash for configuration Restful models.
   mattr_accessor :model_configuration
   self.model_configuration = {}

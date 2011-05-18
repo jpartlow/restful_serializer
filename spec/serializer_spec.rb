@@ -69,7 +69,7 @@ describe Restful::Serializer do
 
   before(:each) do
     @foo = Foo.new(:name => 'A foo')
-    Restful::Serializer.default_url_options = { :host => 'test.org' }
+    Restful.default_url_options = { :host => 'test.org' }
   end
 
   after(:each) do
@@ -97,14 +97,6 @@ describe Restful::Serializer do
   it "should set klass" do
     rs = Restful::Serializer.new(@foo)
     rs.klass.should == 'foo'
-  end
-
-  it "should set default url options" do
-    Restful::Serializer.default_url_options.should == { :host => 'test.org' }
-    Restful::Association.default_url_options.should == { :host => 'test.org' }
-    Restful::Serializer.default_url_options = opts = { :host => 'foo' }
-    Restful::Serializer.default_url_options.should == opts
-    Restful::Association.default_url_options.should == opts
   end
 
   it "should serialize" do

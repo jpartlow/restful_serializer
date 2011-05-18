@@ -3,27 +3,55 @@ require 'deep_merge'
 
 module Restful
 
-  module UrlForHelpers
+  # Used to construct and attempt to call named routes by providing resource
+  # strings out of which a named route method name will be constructed:
+  #
+  # Options:
+  #
+  # * :resources => a symbol, string or array of same describing segments of
+  #   the helper method name.  e.g. [:user, :comments] => user_comments (to
+  #   which _url will be appended...)
+  # * :method => overrides the use of :resources and :prefix
+  # * :args => any arguments to be passed to the named_route when it is called
+  #
+  # = Example
+  #
+  #   Url.for(:resources => [:user, :comments], :args => 1)
+  #   # => send("#{Restful.api_prefix}_user_comments_url", 1)
+  #   # which if it exists is likely to return something like:
+  #   # "http://example.com/user/1/comments"
+  #
+  class Url
+    include ActionController::UrlWriter
+    @@initialized = false
 
-    # Used to construct and attempt to call named routes by providing resource
-    # strings out of which a named route method name will be constructed:
-    #
-    # Options:
-    #
-    # * :resources => a symbol, string or array of same describing segments of
-    #   the helper method name.  e.g. [:user, :comments] => user_comments (to
-    #   which _url will be appended...)
-    # * :method => overrides the use of :resources and :prefix
-    # * :args => any arguments to be passed to the named_route when it is called
-    #
-    # = Example
-    #
-    #   get_url_for(:resources => [:user, :comments], :args => 1)
-    #   # => send("#{Restful.api_prefix}_user_comments_url", 1)
-    #   # which if it exists is likely to return something like:
-    #   # "http://example.com/user/1/comments"
-    #
-    def get_url_for(options)
+    attr_accessor :options
+
+    class << self
+   
+      # Sets ActionController::UrlWriter.default_url_options from Restful.default_url_options.
+      # Attempting to do this during Rails initialization results in botched routing, presumably
+      # because of how ActionController::UrlWriter initializes when you include it into a class.
+      # So this method is called lazily. 
+      def initialize_default_url_options
+        unless @@initialized
+          self.default_url_options = Restful.default_url_options
+          @@initialized = true
+        end
+      end
+
+      # Helper for generating url strings from resource options.
+      def for(options)
+        new(options).to_s
+      end
+    end
+
+    def initialize(options)
+      self.options = options
+      Url.initialize_default_url_options
+    end
+
+    def to_s
       url_for = [options[:method], 'url'] if options.include?(:method)
       url_for ||= [Restful.api_prefix, options[:resources], 'url'].flatten.compact
       url_for = url_for.join('_').downcase
@@ -33,20 +61,7 @@ module Restful
   end
 
   class Serializer
-    include ActionController::UrlWriter
-    include UrlForHelpers
     attr_accessor :subject, :base_klass, :klass, :options, :shallow
- 
-    class << self
-
-      alias_method :serializer_default_url_options=, :default_url_options= 
-      # Set ActionController::UrlWriter.default_url_options for all Serializer
-      # actions.
-      def default_url_options=(options)
-        self.serializer_default_url_options = options
-        Association.default_url_options = options
-      end
-    end
  
     def initialize(subject, *args)
       self.subject = subject
@@ -109,9 +124,9 @@ module Restful
 
     def href 
       unless @href
-        @href = get_url_for(:method => options[:url_for], :args => subject.id) if options.include?(:url_for)
-        @href = get_url_for(:resources => klass, :args => subject.id) unless @href
-        @href = get_url_for(:resources => base_klass, :args => subject.id) unless @href || base_klass == klass
+        @href = Url.for(:method => options[:url_for], :args => subject.id) if options.include?(:url_for)
+        @href = Url.for(:resources => klass, :args => subject.id) unless @href
+        @href = Url.for(:resources => base_klass, :args => subject.id) unless @href || base_klass == klass
       end
       return @href
     end
@@ -143,8 +158,6 @@ module Restful
 
   # Handle for information about an ActiveRecord association.
   class Association
-    include ActionController::UrlWriter
-    include UrlForHelpers
     attr_accessor :name, :association_name, :association, :subject, :subject_klass
     
     def initialize(subject, subject_klass, association_name, name = nil)
@@ -161,7 +174,7 @@ module Restful
 
     def href
       if singular?
-        href = get_url_for(:resources => association_name, :args => subject.send(association.name).id)
+        href = Url.for(:resources => association_name, :args => subject.send(association.name).id)
       else
         href = collective_href
       end
@@ -170,8 +183,8 @@ module Restful
 
     def collective_href
       # try url_for nested resources first
-      unless href = get_url_for(:resources => [subject_klass, association_name], :args => subject.id)
-        href = get_url_for(:resources => association_name)
+      unless href = Url.for(:resources => [subject_klass, association_name], :args => subject.id)
+        href = Url.for(:resources => association_name)
       end
       return href 
     end
