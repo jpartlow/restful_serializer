@@ -131,7 +131,7 @@ describe Restful::Serializer do
         'name' => @foo.fancy_name,
         'foo' => { 
           'name' => @foo.name,
-          :a_method => @foo.a_method,
+          'a_method' => @foo.a_method,
         },
         'href' => "http://test.org/prefix/foos/#{@foo.id}",
       }
@@ -161,7 +161,7 @@ describe Restful::Serializer do
         'foo' => { 
           'id' => @foo.id,
           'name' => @foo.name,
-          :a_method => @foo.a_method,
+          'a_method' => @foo.a_method,
         },
         'href' => "http://test.org/prefix/foos/#{@foo.id}",
       }
@@ -277,7 +277,7 @@ describe Restful::Serializer do
           'name' => @bar1.name,
           'bar'  =>  {
             'name' => @bar1.name,
-            :dingos => [
+            'dingos' => [
               { 'name' => @dingo1.name, 'id' => @dingo1.id, }, 
               { 'name' => @dingo2.name, 'id' => @dingo2.id, }, 
             ],
@@ -290,7 +290,7 @@ describe Restful::Serializer do
           'name' => @bar2.name,
           'bar'  =>  {
             'name' => @bar2.name,
-            :dingos => [
+            'dingos' => [
               { 'name' => @dingo3.name, 'id' => @dingo3.id, }, 
               { 'name' => @dingo4.name, 'id' => @dingo4.id, }, 
             ],
@@ -391,3 +391,29 @@ describe Restful::Serializer do
     end
   end
 end
+
+describe Restful::DeepHash do
+  it "should deeply stringify keys" do
+    h = Restful::DeepHash[
+      :foo => {
+        :bar => 1
+      },
+      :members => [
+        { :id => 1 },
+        { :id => 2 },
+      ]
+    ]
+    h2 = h.deeply_stringify_keys!
+    h.should == {
+      'foo' => {
+        'bar' => 1,
+      },
+      'members' => [
+        { 'id' => 1 },
+        { 'id' => 2 },
+      ],
+    }
+    h.should equal(h2)
+  end
+end
+

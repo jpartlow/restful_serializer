@@ -60,6 +60,31 @@ module Restful
 
   end
 
+  # Provides some utility functions for acting deeply on hashes.
+  class DeepHash < ::Hash
+
+    class << self
+      def deeply_stringify_keys!(object)
+        case object 
+          when ::Hash 
+            then
+              object.stringify_keys!
+              recurse_on = object.values
+          when Array then recurse_on = object
+        end
+        recurse_on.each do |member|
+          deeply_stringify_keys!(member)
+        end if recurse_on
+        return object 
+      end
+    end
+
+    # Walks the graph, and destructively applies stringify_keys!
+    def deeply_stringify_keys!
+      return DeepHash.deeply_stringify_keys!(self)
+    end
+  end
+
   class Serializer
     attr_accessor :subject, :base_klass, :klass, :options, :shallow
  
@@ -134,16 +159,16 @@ module Restful
     private
 
     def _serialize_active_record
-      restful = {
-        klass => ActiveRecord::Serialization::Serializer.new(subject, active_record_serialization_options).serializable_record,
-      }
+      restful = DeepHash[
+        klass => ActiveRecord::Serialization::Serializer.new(subject, active_record_serialization_options).serializable_record
+      ]
       restful['name'] = name if name
       restful['href'] = href
       associations.each do |association|
         restful["#{association.name}_href"] = association.href 
       end unless shallow
 
-      return restful
+      return restful.deeply_stringify_keys!
     end
 
     def _serialize_array
