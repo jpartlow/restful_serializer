@@ -113,6 +113,20 @@ module Restful
     end
   end
 
+  # New instances of Serializer handle the actual conversion of a model subject into
+  # a hash of resource attributes.
+  #
+  # = Configuration
+  #
+  # There are four levels of configuration.
+  #
+  # 1. The subject's base_class configuration (if different than it's own class configuration)
+  # 2. The subject's class configuration
+  # 3. Any additional parameters passed into the initialization of the Serializer.  
+  # 4. Any configuration performed when the Restful::Configuration::Resource is yielded
+  #    to a passed block in initialization.
+  #
+  # One through three are successively deep_merged.  Four allows for complete redefinition.
   class Serializer
     extend Forwardable
 
@@ -141,7 +155,8 @@ module Restful
     
       self.url_factory = UrlFactory.new(:api_prefix => api_prefix, :default_url_options => default_url_options)
     end
-  
+ 
+    # Encode as a resource hash. 
     def serialize
       case 
         when subject.respond_to?(:attribute_names) then _serialize_active_record

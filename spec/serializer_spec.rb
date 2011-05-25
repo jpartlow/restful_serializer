@@ -1,16 +1,5 @@
 require File.expand_path(File.join(File.dirname(__FILE__), 'spec_helper'))
 
-ActionController::Routing::Routes.clear!
-ActionController::Routing::Routes.draw do |map|
-  map.resources :foos
-  map.prefix_foo 'prefix/foos/:id', :controller => 'foos', :action => 'show'
-  map.custom_foo 'custom_foo/:id', :controller => 'foos', :action => 'show'
-  map.resources :bars do |bars|
-    bars.resources :dingos
-  end 
-  map.resources :things
-end
-
 describe Restful::Serializer do
   class Foo < ActiveRecord::Base
     has_many :bars

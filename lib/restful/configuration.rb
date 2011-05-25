@@ -153,7 +153,8 @@ module Restful
         return options.find { |o| o.name == name }
       end
 
-      # True if the option was explicitly set by passing in a value (as opposed to passively set by default).
+      # True if the option was explicitly set by passing in a value (as opposed
+      # to passively set by default).
       def explicitly_set?(option_name)
         explicitly_set.include?(option_name.to_sym)
       end
@@ -289,6 +290,26 @@ module Restful
     end
 
     # Configuration object for one web service.
+    #
+    # = Options
+    #
+    # * :name => the name of the web service
+    #
+    # * :api_prefix => used to supply a prefix to generated name_route methods if method
+    #   names cannot be inferred purely by resource class names.
+    #
+    #  A web service for Reservation might prefix with :guest_api, so the named routes would
+    #  be +guest_api_reservations_url+ rather than reservations_url, which might instead
+    #  return a path for accessing a Reservation through an HTML interface (perhaps through
+    #  a separate controller...)
+    #
+    # * :default_url_options => ActionController::UrlWriter requires a hash of default
+    #   url options (notable { :host => 'foo.com' }).  This can be set per WebService
+    #   and globally via Restful.default_url_options.
+    #
+    # = Resources
+    #
+    # Resources configurations are set with a call to +register_resource+.
     class WebService < Configurator
       option :name
       option :api_prefix
@@ -299,6 +320,7 @@ module Restful
         super(options.merge(:name => name))
       end
 
+      # Adds a Restful::Configuration::Resource.
       def register_resource(name, options = {}, &block)
         resources[name] = Resource.register(options, &block)
       end
@@ -321,6 +343,31 @@ module Restful
     end
 
     # Configuration object for one resource.
+    #
+    # = Options
+    #
+    # The following options may be set for each resource configured on a web service:
+    #
+    # * :name_method => method to call on an instance to produce a human meaningful
+    #   reference for the instance.  Defaults to :name.
+    # * :serialization => options to be passed to a
+    #   Restful::Configuration::ARSerialization to configure serialization of the
+    #   ActiveRecord instance itself.
+    # * :url_for => if the named_route helper method cannot be guessed from normal
+    #   Rails restful syntax, it may be overriden here.
+    # * :associations => you may include href references to the instance's
+    #   associations.  This can be a single association, a simple array of
+    #   assocations, or a hash of association href keys to assocation names.  If
+    #   this is set as a hash, then the key is the name of the href (without
+    #   '_href'), and the value is the model association name.  If value is nil,
+    #   then key is assumed to be both.
+    # * :shallow => if you are serializing an association, by default member
+    #   includes and association references are stripped.  Set this to false to
+    #   traverse deeply.
+    # * :no_inherited_options => normally a subclass inherits and merges into its
+    #   base class settings.  Setting this to true prevents this so that only the
+    #   options specifically set for the class will be used.  Default false.
+    #
     class Resource < Configurator
       option :name_method, :default => :name
       option :url_for
@@ -340,6 +387,18 @@ module Restful
 
     # Configuration for the ActiveRecord::Serialization::Serializer
     # of one activerecord class.
+    #
+    # = Options
+    #
+    # * :only => an attribute name or an array of attribute names.  Defines which
+    #   attributes will be serialized.
+    # * :except => an attribute name or an array of attribute names.  All attributes
+    #   except these will be serialized.  Inverse of :only.  :only takes precedence.
+    # * :include => nested ARSerialization definitions for associations.
+    # * :methods => an method name or an array of method names to be included in the
+    #   serialization.
+    #
+    # See ActiveRecord::Serialization.to_json for more details
     class ARSerialization < Configurator
       option :only, :type => :array
       option :except, :type => :array 

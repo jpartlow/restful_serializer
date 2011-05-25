@@ -46,8 +46,9 @@ Example configuration (config/initializers/restful.rb:
 
   Restful.register_web_service('Foo Web Service') do |config|
 
-    # This is the url prefix used for calls to the web service.  It defaults to the web service name, but
-    # can be set to be something different, or to nil, if you're web service has no base uri and named_routes
+    # This is the url prefix used for calls to the web service.  It defaults to
+    # the web service name, but can be set to be something different, or to
+    # nil, if your web service has no base uri and named_routes
     # rely solely on the model class.
     config.api_prefix = 'foo_api'
 
@@ -98,7 +99,7 @@ Note that the serialization configuration is the same which you would normally p
 Example output:
 
   foo = Foo.create(:name => 'A foo', :column1 => 1, :column2 => 2, :secret => "very secret")
-  pp foo.restful
+  pp foo.restful('Foo Web Service')
   # =>
   # {"href"=>"http://test.app/client_api/foos/1",
   #  "name"=>"A foo",
@@ -108,6 +109,17 @@ Example output:
   #    "name"=>"A foo",
   #    "column1"=>1,
   #    "column2"=>2,}}
+
+  pp foo.restful('Foo Web Service') do |configure|
+    configure.serialization.only = [:id, :name]
+  end
+  # =>
+  # {"href"=>"http://test.app/client_api/foos/1",
+  #  "name"=>"A foo",
+  #  "bars_href"=>"http://test.app/client_api/foos/1/bars",
+  #  "foo"=>
+  #   {"id"=>1,
+  #    "name"=>"A foo",}}
 
 = More Docs
 
