@@ -25,37 +25,73 @@ Models:
   #  bar1
   #  bar2
   #  system
+  #  subbar1
+  #  subbar2
+  #  type
   class Bar < ActiveRecord::Base
     has_one :foo
   end
 
+  class SubBar1 < Bar
+    def interesting_state; ... end
+  end
+
+  class SubBar2 < Bar
+  end
+
 Example configuration (config/initializers/restful.rb:
 
-  # url prefix for calls to the web service
-  Restful.api_prefix = 'client_api'
-  Restful.model_configuration = {
+  # Required for href route generation. (This can also be set per web_service)
+  Restful.default_url_options(:host => 'foo.com')
+
+  Restful.register_web_service('Foo Web Service') do |config|
+
+    # This is the url prefix used for calls to the web service.  It defaults to the web service name, but
+    # can be set to be something different, or to nil, if you're web service has no base uri and named_routes
+    # rely solely on the model class.
+    config.api_prefix = 'foo_api'
+
     # This configuration provides information which anyone authorized to see a
     # given object at the most basic level should be able to see.
-  
+    # 
     # Note: it is advisable to set :serialization => :only for all models, so that
     # new attributes do not automatically become available through the api.
-  
-    :foo => {
+    config.register_resource(:foo,
       :serialization => {
         :only => [:id, :column1, :column2],
       },
       :associations => {:bars => nil}
-    },
-    :bar => {
+    )
+
+    config.register_resource(:bar,
       :serialization => {
         :only => [:id, :bar1, :bar2],
         :include => {
           :foo => { :only => [:column1] }
         },
-      }
+      },
       :associations => {:foo => nil}
-    }
-  }
+    )
+
+    # Alternatively you may manipulate the resource configuration directly.
+    # This can be helpful if you are inheriting properties from a base class and
+    # want fine-grained control over how the options are merged and finalized.
+    config.register_resource(:sub_bar1) do |resource|
+      resource.serialization do |serial|
+        serial.only << :subbar1 
+        serial.methods << :interesting_state
+      end
+    end
+
+    config.register_resource(:sub_bar2) do |resource|
+      resource.serialization do |serial|
+        serial.only << :subbar1
+      end
+      # If shallow is set false, then associations will be presented when the
+      # resource is generated from lists (as in foo.bars.restful)
+      resource.shallow = false
+    end
+  end
 
 Note that the serialization configuration is the same which you would normally pass to ActiveRecord::Serialization (in a model.to_json call, for instance).
 

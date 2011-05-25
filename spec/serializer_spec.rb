@@ -73,15 +73,15 @@ describe Restful::Serializer do
   end
 
   after(:each) do
-    Restful.api_prefix = nil
-    Restful.model_configuration = {}
+    Restful.clear
   end
 
-  it "should not interfere with resource route generation" do
+  def check_routing
     ActionController::Routing::Routes.routes.size.should == 30
     by_method = ActionController::Routing::Routes.routes.group_by { |r|
       r.conditions[:method]
     }
+#    ActionController::Routing::Routes.routes.each { |r| puts r }
     by_method[:get].size.should == 4 * 4
     by_method[:put].size.should == 4
     by_method[:post].size.should == 4
@@ -89,44 +89,68 @@ describe Restful::Serializer do
     by_method[nil].size.should == 2
   end
 
-  it "should require a subject" do
-    lambda { Restful::Serializer.new }.should raise_error(ArgumentError)
-    Restful::Serializer.new('foo').should be_kind_of(Restful::Serializer)
+  it "should not interfere with resource route generation" do
+    check_routing
   end
 
-  it "should set klass" do
-    rs = Restful::Serializer.new(@foo)
-    rs.klass.should == 'foo'
+  it "should not interfere with resource route generation if we configure webservices" do
+    Restful.register_web_service('test',
+      :resources => {
+        :foo => { :serialization => { :only => :id } },
+      }
+    )
+    check_routing
   end
 
-  it "should serialize" do
-    @foo.save!
-    rs = Restful::Serializer.new(@foo)
-    rs.serialize.should == {
-      'name' => @foo.name,
-      'foo' => { 
-        'id' => @foo.id,
+  describe "with an empty web service" do
+
+    before(:each) do
+      @empty_ws = Restful.register_web_service('empty')
+    end
+
+    it "should require a subject and a web service" do
+      lambda { Restful::Serializer.new }.should raise_error(ArgumentError)
+      lambda { Restful::Serializer.new('foo') }.should raise_error(ArgumentError)
+      Restful::Serializer.new('foo', @empty_ws).should be_kind_of(Restful::Serializer)
+    end
+  
+    it "should set klass" do
+      rs = Restful::Serializer.new(@foo, @empty_ws)
+      rs.klass.should == 'foo'
+    end
+  
+    it "should serialize" do
+      @foo.save!
+      rs = Restful::Serializer.new(@foo, @empty_ws)
+      rs.serialize.should == {
         'name' => @foo.name,
-      },
-      'href' => "http://test.org/foos/#{@foo.id}",
-    }
+        'foo' => { 
+          'id' => @foo.id,
+          'name' => @foo.name,
+        },
+        'href' => "http://test.org/foos/#{@foo.id}",
+      }
+    end
   end
 
   describe "with configuration options" do
 
     before(:each) do
-      Restful.api_prefix = 'prefix'
-      Restful.model_configuration = {
-        :foo => {
-          :name => :fancy_name,
-          :serialization => { :only => [:name], :methods => [:a_method] },
+      Restful.register_web_service('test',
+        :api_prefix => 'prefix',
+        :resources => {
+          :foo => {
+            :name_method => :fancy_name,
+            :serialization => { :only => [:name], :methods => [:a_method] },
+          }
         }
-      }
+      )
+      @test_ws = Restful.web_service_configuration('test')
       @foo.save!
     end
 
     it "should take options from configuration" do
-      rs = Restful::Serializer.new(@foo)
+      rs = Restful::Serializer.new(@foo, @test_ws)
       rs.serialize.should == {
         'name' => @foo.fancy_name,
         'foo' => { 
@@ -137,9 +161,9 @@ describe Restful::Serializer do
       }
     end
   
-    it "should override options during initialization" do
-      rs = Restful::Serializer.new(@foo, 
-        :name => :name, 
+    it "should merge options during initialization" do
+      rs = Restful::Serializer.new(@foo, @test_ws,
+        :name_method => :name, 
         :serialization => { :only => [:id] }, 
         :url_for => :custom_foo
       )
@@ -147,21 +171,23 @@ describe Restful::Serializer do
         'name' => @foo.name,
         'foo' => { 
           'id' => @foo.id,
+          'name' => @foo.name,
+          'a_method' => @foo.a_method,
         },
         'href' => "http://test.org/custom_foo/#{@foo.id}",
       }
     end
 
-    it "should deeply merge overridden options" do
-      rs = Restful::Serializer.new(@foo, 
-        :deep_merge => { :serialization => { :only => [:id] } }
-      )
+    it "should provide fine grained configuration" do
+      rs = Restful::Serializer.new(@foo, @test_ws) do |config|
+        config.url_for = nil
+        config.serialization.only = :id
+        config.serialization.methods.clear
+      end
       rs.serialize.should == {
         'name' => @foo.fancy_name,
         'foo' => { 
           'id' => @foo.id,
-          'name' => @foo.name,
-          'a_method' => @foo.a_method,
         },
         'href' => "http://test.org/prefix/foos/#{@foo.id}",
       }
@@ -171,19 +197,22 @@ describe Restful::Serializer do
   describe "with associations" do
 
     before(:each) do
-      Restful.model_configuration = {
-        :foo => {
-          :associations => :bars,
-        },
-        :bar => {
-          :associations => { :special => :foo, :dingos => nil },
-        },
-      }
+      Restful.register_web_service('test',
+        :resources => {
+          :foo => {
+            :associations => :bars,
+          },
+          :bar => {
+            :associations => { :special => :foo, :dingos => nil },
+          },
+        }
+      )
+      @test_ws = Restful.web_service_configuration('test')
       generate_instances
     end
 
     it "should include references to associations" do
-      rs = Restful::Serializer.new(@foo)
+      rs = Restful::Serializer.new(@foo, @test_ws)
       rs.serialize.should == {
         'name' => @foo.name,
         'foo' => { 
@@ -196,7 +225,7 @@ describe Restful::Serializer do
     end
 
     it "should handle multiple and nested associations" do
-      rs = Restful::Serializer.new(@bar1)
+      rs = Restful::Serializer.new(@bar1, @test_ws)
       rs.serialize.should == {
         'name' => @bar1.name,
         'bar' => { 
@@ -214,17 +243,20 @@ describe Restful::Serializer do
   describe "with subclasses" do
     
     before(:each) do
-      Restful.model_configuration = {
-        :thing => {
-          :serialization => { :except => :secret }
+      Restful.register_web_service('test',
+        :resources => {
+          :thing => {
+            :serialization => { :except => :secret }
+          }
         }
-      }
+      )
+      @test_ws = Restful.web_service_configuration('test')
       @thing = Thing.create!(:name => 'a thing', :secret => 'a secret')
       @sub = Sub.create!(:name => 'a sub thing', :secret => 'another secret')
     end
 
     it "should pull superclass configuration up into a subclass serialization" do
-      rs = Restful::Serializer.new(@sub)
+      rs = Restful::Serializer.new(@sub, @test_ws)
       rs.serialize.should == {
         'name' => @sub.name,
         'href' => "http://test.org/things/#{@sub.id}",
@@ -238,20 +270,23 @@ describe Restful::Serializer do
 
   describe "with arrays" do
     before(:each) do
-      Restful.model_configuration = {
-        :foo => {
-          :associations => :bars,
-        },
-        :bar => {
-          :serialization => { :only => [:name], :include => { :dingos => { :only =>  [ :name, :id] } } },
-          :associations => [:foo, :dingos],
-        },
-      }
+      Restful.register_web_service('test',
+        :resources => {
+          :foo => {
+            :associations => :bars,
+          },
+          :bar => {
+            :serialization => { :only => [:name], :include => { :dingos => { :only =>  [ :name, :id] } } },
+            :associations => [:foo, :dingos],
+          },
+        }
+      )
+      @test_ws = Restful.web_service_configuration('test')
       generate_instances
     end
 
     it "should serialize arrays" do
-      rs = Restful::Serializer.new(@foo.bars)
+      rs = Restful::Serializer.new(@foo.bars, @test_ws)
       rs.serialize.should == [
         {
           'name' => @bar1.name,
@@ -271,7 +306,7 @@ describe Restful::Serializer do
     end
 
     it "should deeply serialize arrays if told to" do
-      rs = Restful::Serializer.new(@foo.bars, :shallow => false)
+      rs = Restful::Serializer.new(@foo.bars, @test_ws, :shallow => false)
       rs.serialize.should == [
         {
           'name' => @bar1.name,
@@ -302,8 +337,8 @@ describe Restful::Serializer do
       ] 
     end
 
-    it "should override options during initialization for each member" do
-      rs = Restful::Serializer.new(@foo.bars, 
+    it "should merge options during initialization for each member" do
+      rs = Restful::Serializer.new(@foo.bars, @test_ws,
         :serialization => { :only => :id } 
       )
       rs.serialize.should == [
@@ -311,30 +346,31 @@ describe Restful::Serializer do
           'name' => @bar1.name,
           'href' => "http://test.org/bars/#{@bar1.id}",
           'bar'  =>  {
-            'id' => @bar1.id,
+            'name' => @bar1.name,
+            'id'   => @bar1.id,
           },
         },
         {
           'name' => @bar2.name,
           'href' => "http://test.org/bars/#{@bar2.id}",
           'bar'  =>  {
-            'id' => @bar2.id,
+            'name' => @bar2.name,
+            'id'   => @bar2.id,
           },
         },
       ] 
     end
 
-    it "should deeply merge overridden options for each member" do
-      rs = Restful::Serializer.new(@foo.bars, 
-        :deep_merge => { :serialization => { :only => [:id] } }
-      )
+    it "should provide fine grained configuration for each member" do
+      rs = Restful::Serializer.new(@foo.bars, @test_ws) do |configure|
+        configure.serialization.only =  :id
+      end
       rs.serialize.should == [
         {
           'name' => @bar1.name,
           'href' => "http://test.org/bars/#{@bar1.id}",
           'bar'  =>  {
             'id' => @bar1.id,
-            'name' => @bar1.name,
           },
         },
         {
@@ -342,54 +378,92 @@ describe Restful::Serializer do
           'href' => "http://test.org/bars/#{@bar2.id}",
           'bar'  =>  {
             'id' => @bar2.id,
-            'name' => @bar2.name,
           },
         },
       ] 
     end
   end
 
-  it "should hook into activerecord" do
-    @foo.save!
-    @foo.should respond_to(:restful)
-    @foo.restful(:serialization => { :only => :name }).should == {
-      'name' => @foo.name,
-      'foo' => { 
-        'name' => @foo.name,
-      },
-      'href' => "http://test.org/foos/#{@foo.id}",
-    }
-  end
+  describe "extensions" do
+    
+    before(:each) do
+      Restful.register_web_service('test',
+        :resources => {
+          :foo => {
+            :serialization => { :only => :name },
+            :associations => :bars,
+          },
+          :bar => {
+            :serialization => { :only => [:name], :include => { :dingos => { :only =>  [ :name, :id] } } },
+            :associations => [:foo, :dingos],
+          },
+        }
+      )
+      @test_ws = Restful.web_service_configuration('test')
+      generate_instances
+    end
 
-  it "Should hook into associations" do
-    generate_instances
-    @foo.bars.restful.should == [
-      {
-        "href" => "http://test.org/bars/#{@bar1.id}",
-        "name" => @bar1.name,
-        "bar" => {
+    it "should hook into activerecord" do
+      @foo.should respond_to(:restful)
+      result = @foo.restful('test', :serialization => { :only => [:id] })
+      result.should == {
+        'name' => @foo.name,
+        'foo' => { 
+          'name' => @foo.name,
+          'id' => @foo.id,
+        },
+        'href' => "http://test.org/foos/#{@foo.id}",
+        'bars_href' => "http://test.org/bars",
+      }
+      # test default web service
+      @foo.restful(:serialization => {:only => :id}).should == result
+    end
+  
+    it "should hook into associations" do
+      result = @foo.bars.restful('test') do |configure|
+        configure.serialization.only = []
+      end
+
+      result.should == [
+        {
+          "href" => "http://test.org/bars/#{@bar1.id}",
           "name" => @bar1.name,
-          "foo_id" => @bar1.foo_id,
-          "id" => @bar1.id, 
+          "bar" => {
+            "name" => @bar1.name,
+            "foo_id" => @bar1.foo_id,
+            "id" => @bar1.id, 
+          },
         },
-      },
-      {
-        "href" => "http://test.org/bars/#{@bar2.id}",
-        "name" => @bar2.name,
-        "bar" => {
+        {
+          "href" => "http://test.org/bars/#{@bar2.id}",
           "name" => @bar2.name,
-          "foo_id" => @bar2.foo_id,
-          "id" => @bar2.id,
+          "bar" => {
+            "name" => @bar2.name,
+            "foo_id" => @bar2.foo_id,
+            "id" => @bar2.id,
+          },
         },
-      },
-    ]
+      ]
+
+      @foo.bars.to_a.restful('test') do |configure|
+        configure.serialization.only = []
+      end.should == result
+    end
+
   end
 
   it "should work with AssociationProxy.respond_to" do
-    pending('associations should respond_to :restful (AR 2.1 issue or AR issue in general?)') do
-      @foo.bars.should respond_to(:restful)
-    end
+    @foo.bars.should respond_to(:restful)
   end
+
+  it "should extend ActiveRecord" do
+    @foo.should respond_to(:restful)
+  end
+
+  it "should extend Array" do
+    [].should respond_to(:restful)
+  end
+
 end
 
 describe Restful::DeepHash do

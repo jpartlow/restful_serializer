@@ -1,4 +1,5 @@
 # This file is part of restful_serializer.  Copyright 2011 Joshua Partlow.  This is free software, see the LICENSE file for details.
+#require 'restful/configuration'
 
 # This library is used to decorate ActiveRecord with methods to assist in generating 
 # Restful content for Web Services.
@@ -65,7 +66,8 @@
 #     }
 #   }
 #
-#   bob = Person.new(:first_name => 'Bob', :last_name => 'Smith', :age => 41, :secrets => 'untold')
+#   bob = Person.new(:first_name => 'Bob', :last_name => 'Smith', :age => 41,
+#     :secrets => 'untold')
 #   bob.restful
 #   # => { 
 #   #   'name' => 'Bob Smith'
@@ -79,9 +81,11 @@
 #   #   'books_href' => 'http://www.example.com/web_service/people/1/books' }
 #   # }
 #
-# Options may be overridden at call time, by default this overwrite the passed options completely:
+# Options may be overridden at call time, by default this overwrites the passed
+# options completely:
 #  
-#   bob = Person.new(:first_name => 'Bob', :last_name => 'Smith', :age => 41, :secrets => 'untold')
+#   bob = Person.new(:first_name => 'Bob', :last_name => 'Smith', :age => 41,
+#     :secrets => 'untold')
 #   bob.restful(:serialization => { :except => [:id] })
 #   # => { 
 #   #   'name' => 'Bob Smith'
@@ -98,7 +102,8 @@
 # To perform a deep merge of options instead, place the options to be deeply merged
 # inside a :deep_merge hash:
 #
-#   bob = Person.new(:first_name => 'Bob', :last_name => 'Smith', :age => 41, :secrets => 'untold')
+#   bob = Person.new(:first_name => 'Bob', :last_name => 'Smith', :age => 41,
+#     :secrets => 'untold')
 #   bob.restful(:deep_merge => { :serialization => { :except => [:id] } })
 #   # => { 
 #   #   'name' => 'Bob Smith'
@@ -113,55 +118,73 @@
 #
 # These two techniques can be combined, but overwriting will occur prior to a deep merge...
 #
-# (There is a trap in how deep merge handles this.  If the above :except values had
+# There is a trap in how deep merge handles this.  If the above :except values had
 # not been configured as arrays, then deep merge would have overwritten rather than merging
-# them.  This could probably be adjusted with a closer look into the deep_merge docs.)
+# them.  This could probably be adjusted with a closer look into the deep_merge docs.
+#
+# We also don't have 'knockouts' configured yet to signal remove of a particular item.
 module Restful
   # Requiring Serializer (and hence action_controller for UrlWriter) was interferring with
   # route generation somehow, so instead we are letting it autoload if used.
   autoload :Serializer, 'restful/serializer'
-
-  # Route prefix for api calls.
-  mattr_accessor :api_prefix
+  autoload :Configuration, 'restful/configuration'
 
   # Default url options for ActionController::UrlWriter.
   # (Generally you must provide {:host => 'example.com'})
   mattr_accessor :default_url_options
   self.default_url_options = {}
 
-  # Hash for configuration Restful models.
-  mattr_accessor :model_configuration
-  self.model_configuration = {}
+  # Hash of registered Restful::Configuration::WebService configurations. 
+  mattr_accessor :registered_web_services
+  self.registered_web_services = {}
 
-  def self.model_configuration=(options)
-    @@model_configuration = options.symbolize_keys
-  end
+  class << self
 
-  def self.model_configuration_for(key)
-    config = case key 
-      when Symbol
-        model_configuration[key]
-      when String
-        model_configuration[key.to_sym]
-      when Class
-        model_configuration[key.name.underscore.to_sym]
-      else
-        model_configuration[key.class.name.underscore.to_sym]
+    # Configured the specified web service.
+    def register_web_service(name, options = {}, &block)
+      @@registered_web_services[symbolized_web_service_name(name)] = new_ws = Restful::Configuration::WebService.register(name, options, &block)
+      return new_ws
     end
-    return Marshal.load(Marshal.dump(config)) || {} # deep clone or empty
+
+    # Retrieve configuration for the specified web service. 
+    def web_service_configuration(key)
+      ws = @@registered_web_services[symbolized_web_service_name(key)]
+      if ws.default_url_options.empty? && !default_url_options.empty?
+        ws.default_url_options = default_url_options.dup
+      end if ws
+      return ws
+    end
+
+    def symbolized_web_service_name(name)
+      return if name.nil?
+      name.to_s.downcase.gsub(/[^\w]+/,'_').to_sym
+    end
+
+    def clear
+      self.default_url_options = {}
+      self.registered_web_services = {}
+    end
   end
 
   module Extensions
-    def restful(*args)
-      Restful::Serializer.new(self, *args).serialize
-    end
-  end
 
-  module AssociationExtensions
-    def restful(*args)
-      Restful::Serializer.new(self, *args).serialize
+    # Restfully serialize an activerecord object, association or a plain array of activerecord objects.
+    # The web service name must be specified as registered via Restful.register_web_service, unless there
+    # is only one registered service.
+    #
+    # A final hash of options will be passed on to the serializer for configuration.
+    #
+    # If a block is given, the serializer's Restful::Configuration::Resource configuration object will
+    # be exposed for fine grained configuration.
+    def restful(*args, &block)
+      options = args.extract_options!
+      web_service_name = args.shift
+      web_service = Restful.web_service_configuration(web_service_name)
+      web_service ||= Restful.registered_web_services.values.first if Restful.registered_web_services.size == 1
+      Restful::Serializer.new(self, web_service, options, &block).serialize
     end
   end
 end
 ActiveRecord::Base.send(:include, Restful::Extensions)
-ActiveRecord::Associations::AssociationProxy.send(:include, Restful::AssociationExtensions)
+ActiveRecord::Associations::AssociationProxy.send(:include, Restful::Extensions)
+Array.send(:include, Restful::Extensions)
