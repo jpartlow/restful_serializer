@@ -1,5 +1,4 @@
 # This file is part of restful_serializer.  Copyright 2011 Joshua Partlow.  This is free software, see the LICENSE file for details.
-#require 'restful/configuration'
 
 # This library is used to decorate ActiveRecord with methods to assist in generating 
 # Restful content for Web Services.
@@ -111,8 +110,6 @@
 #
 # These two techniques can be combined.
 module Restful
-  # Requiring Serializer (and hence action_controller for UrlWriter) was interferring with
-  # route generation somehow, so instead we are letting it autoload if used.
   autoload :Serializer, 'restful/serializer'
   autoload :Configuration, 'restful/configuration'
 
@@ -173,6 +170,21 @@ module Restful
     end
   end
 end
+
+# Rails 2.3 Hash is extended with :deep_merge and :deep_merge! already, and route
+# generation requires these versions.  We're using the +deep_merge+ gem's versions,
+# and need to setup aliases to ensure that Rails versions remain available while
+# we are still able to access the gem's versions.
+Hash.class_eval do
+  alias_method :rails_deep_merge, :deep_merge
+  alias_method :rails_deep_merge!, :deep_merge!
+  require 'deep_merge'
+  alias_method :_rs_deep_merge, :deep_merge
+  alias_method :_rs_deep_merge!, :deep_merge!
+  alias_method :deep_merge, :rails_deep_merge
+  alias_method :deep_merge!, :rails_deep_merge!
+end
+
 ActiveRecord::Base.send(:include, Restful::Extensions)
 ActiveRecord::Associations::AssociationProxy.send(:include, Restful::Extensions)
 Array.send(:include, Restful::Extensions)

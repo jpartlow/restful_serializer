@@ -1,5 +1,4 @@
 # This file is part of restful_serializer.  Copyright 2011 Joshua Partlow.  This is free software, see the LICENSE file for details.
-require 'deep_merge'
 
 module Restful
   module Configuration
@@ -140,7 +139,7 @@ module Restful
 
         hash = to_hash(:ignore_empty => true, :skip_defaults => true)
         new_configurable = self.class.new
-        hash.deep_merge!(other_hash)
+        hash._rs_deep_merge!(other_hash)
         return new_configurable.set(hash)
       end
 

@@ -1,5 +1,4 @@
 # This file is part of restful_serializer.  Copyright 2011 Joshua Partlow.  This is free software, see the LICENSE file for details.
-require 'deep_merge'
 require 'forwardable'
 
 module Restful
