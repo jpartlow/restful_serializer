@@ -48,7 +48,7 @@ module Restful
   #   # "http://example.com/user/1/comments"
   #
   class Url
-    include ActionController::UrlWriter
+    include Rails.application.routes.url_helpers
     @@initialized = false
 
     attr_accessor :options

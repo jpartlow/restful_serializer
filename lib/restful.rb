@@ -186,5 +186,5 @@ Hash.class_eval do
 end
 
 ActiveRecord::Base.send(:include, Restful::Extensions)
-ActiveRecord::Associations::AssociationProxy.send(:include, Restful::Extensions)
+ActiveRecord::Associations::CollectionProxy.send(:include, Restful::Extensions)
 Array.send(:include, Restful::Extensions)
