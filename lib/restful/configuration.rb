@@ -21,7 +21,7 @@ module Restful
       def self.included(base)
         base.class_eval do
           extend ClassMethods
-          class_inheritable_array :options
+          class_attribute :options
           self.options = []
         end
       end
