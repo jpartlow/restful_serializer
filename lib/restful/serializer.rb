@@ -157,9 +157,9 @@ module Restful
  
     # Encode as a resource hash. 
     def serialize
-      case 
-        when subject.respond_to?(:attribute_names) then _serialize_active_record
+      case
         when subject.kind_of?(Array) then _serialize_array
+        when subject.respond_to?(:attribute_names) then _serialize_active_record
         else ActiveSupport::JSON.decode(subject.to_json) # just capture the hash of the object structure
       end
     end
@@ -171,7 +171,7 @@ module Restful
     end
 
     def name
-      subject.send(name_method) if subject.respond_to?(name_method)
+      subject.send(:name_method) if subject.respond_to?(:name_method)
     end
 
     def associations
@@ -227,7 +227,7 @@ module Restful
           class_configuration.deep_clone :
           base_configuration.deep_merge!(class_configuration)
 
-      self.resource_configuration = resource_configuration.deep_merge!(passed_configuration)
+      self.resource_configuration = self.resource_configuration.deep_merge!(passed_configuration)
 
       yield(resource_configuration) if block_given?
 
@@ -236,7 +236,7 @@ module Restful
 
     def _serialize_active_record
       restful = DeepHash[
-        klass => ActiveRecord::Serialization::Serializer.new(subject, active_record_serialization_options).serializable_record
+        klass => subject.respond_to?(:serializable_hash) ? subject.serializable_hash : subject.to_a #ActiveRecord::Serialization::Serializer.new(subject, active_record_serialization_options).serializable_record
       ]
       restful['name'] = name if name
       restful['href'] = href
