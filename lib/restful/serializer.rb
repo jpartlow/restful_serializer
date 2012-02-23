@@ -238,8 +238,8 @@ module Restful
       restful = DeepHash[
         klass => subject.respond_to?(:serializable_hash) ? subject.serializable_hash : subject.to_a #ActiveRecord::Serialization::Serializer.new(subject, active_record_serialization_options).serializable_record
       ]
-      restful['name'] = name if name
       restful['href'] = href
+      restful['name'] = subject.name if subject.respond_to?("name")
       associations.each do |association|
         restful["#{association.name}_href"] = association.href 
       end unless shallow
@@ -248,7 +248,7 @@ module Restful
     end
 
     def _serialize_array
-      restful = subject.map do |e|
+      restful = subject.to_a.map do |e|
         array_options = options.clone
         array_options = { :shallow => true }.merge(array_options)
         Serializer.new(e, web_service, array_options, &configure_block).serialize
