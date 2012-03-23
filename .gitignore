@@ -1,4 +1,6 @@
 *.swp
+.rvmrc
+log/*
 .vimrc
 .current
 spec/*.log
