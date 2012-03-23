@@ -236,8 +236,7 @@ module Restful
 
     def _serialize_active_record
       restful = DeepHash[
-        #klass => subject.respond_to?(:serializable_hash) ? subject.serializable_hash : subject.to_a #ActiveRecord::Serialization::Serializer.new(subject, active_record_serialization_options).serializable_record
-        klass => subject.serializable_hash(active_record_serialization_options) #ActiveRecord::Serialization::Serializer.new(subject, active_record_serialization_options).serializable_record
+        klass => subject.serializable_hash(active_record_serialization_options)
       ]
       restful['name'] = name if name
       restful['href'] = href
