@@ -23,8 +23,8 @@ Gem::Specification.new do |s|
   s.files = `git ls-files`.split("\n")
   s.test_files = `git ls-files spec/*`.split("\n")
 
-  s.add_development_dependency(%q<rspec>, [">= 1.2.9"])
+  s.add_development_dependency(%q<rspec>, [">= 2.0.0"])
   s.add_development_dependency(%q<sqlite3>)
-  s.add_runtime_dependency(%q<rails>, [">= 3.0.0", "<4.0.0"])
+  s.add_runtime_dependency(%q<rails>, [">= 3.0.0", "< 4.0.0"])
   s.add_runtime_dependency(%q<deep_merge>, [">= 1.0.0"])
 end

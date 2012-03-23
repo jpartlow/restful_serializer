@@ -6,7 +6,7 @@ If the model has a name column, it will be used to describe the resource.
 
 This library does not attempt to provide href info for transitions, or deal much with questions of authorization beyond what is specified in the serialization configuration lines.  It assumes that these issues would be resolved in the controller.  It assumes standard naming conventions for routes.
 
-Tested with Rails 2.3.11.  Requires the Rails framework to be loaded.
+Requires Rails 3.
 
 == Example 
 
@@ -124,3 +124,10 @@ Example output:
 = More Docs
 
 Please see the Restful rdoc and the specs for more details.
+
+* https://github.com/jpartlow/restful_serializer
+* API: http://rubydoc.info/gems/restful_serializer/frames
+
+= Rails 2
+
+This gem requires Rails 3.  To use it with Rails 2, you will need version 0.1.4, which is tagged 'rails2' in github.
