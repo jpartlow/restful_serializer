@@ -171,7 +171,7 @@ module Restful
     end
 
     def name
-      subject.send(:name_method) if subject.respond_to?(:name_method)
+      subject.send(name_method) if subject.respond_to?(name_method)
     end
 
     def associations
@@ -225,9 +225,9 @@ module Restful
       self.resource_configuration = 
         (klass == base_klass || class_configuration.no_inherited_options) ? 
           class_configuration.deep_clone :
-          base_configuration.deep_merge!(class_configuration)
+          base_configuration.deeper_merge!(class_configuration)
 
-      self.resource_configuration = self.resource_configuration.deep_merge!(passed_configuration)
+      self.resource_configuration = self.resource_configuration.deeper_merge!(passed_configuration)
 
       yield(resource_configuration) if block_given?
 
@@ -236,10 +236,11 @@ module Restful
 
     def _serialize_active_record
       restful = DeepHash[
-        klass => subject.respond_to?(:serializable_hash) ? subject.serializable_hash : subject.to_a #ActiveRecord::Serialization::Serializer.new(subject, active_record_serialization_options).serializable_record
+        #klass => subject.respond_to?(:serializable_hash) ? subject.serializable_hash : subject.to_a #ActiveRecord::Serialization::Serializer.new(subject, active_record_serialization_options).serializable_record
+        klass => subject.serializable_hash(active_record_serialization_options) #ActiveRecord::Serialization::Serializer.new(subject, active_record_serialization_options).serializable_record
       ]
+      restful['name'] = name if name
       restful['href'] = href
-      restful['name'] = subject.name if subject.respond_to?("name")
       associations.each do |association|
         restful["#{association.name}_href"] = association.href 
       end unless shallow

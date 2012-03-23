@@ -3,12 +3,13 @@ require File.expand_path(File.join(File.dirname(__FILE__), 'spec_helper'))
 # These routes are only required by some tests, but route generation issues crop
 # up depending on the order in which restful/* files are required.  The reasons
 # are mysterious, though they may have something to do with ActionController::UrlWriter
+# ^^^ this was a rails2 note and may no longer apply
 Rails.application.routes.clear!
 Rails.application.routes.draw do
   resources :foos
   controller :foos do
-    match 'prefix/foos/:id' => :show
-    match 'custom_foo/:id' => :show
+    match 'prefix/foos/:id' => :show, :as => :prefix_foo
+    match 'custom_foo/:id' => :show, :as => :custom_foo
   end
   resources :bars do
     resources :dingos
@@ -82,11 +83,11 @@ describe Restful::Serializer do
   end
 
   def check_routing
-    ActionController::Routing::Routes.routes.size.should == 30
-    by_method = ActionController::Routing::Routes.routes.group_by { |r|
-      r.conditions[:method]
+    Rails.application.routes.routes.size.should == 30
+    by_method = Rails.application.routes.routes.group_by { |r|
+      method = r.verb.blank? ? nil : r.verb.downcase.to_sym
     }
-#    ActionController::Routing::Routes.routes.each { |r| puts r }
+#    Rails.application.routes.routes.each { |r| puts r }
     by_method[:get].size.should == 4 * 4
     by_method[:put].size.should == 4
     by_method[:post].size.should == 4

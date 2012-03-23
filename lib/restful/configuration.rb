@@ -21,7 +21,7 @@ module Restful
       def self.included(base)
         base.class_eval do
           extend ClassMethods
-          class_inheritable_array :options
+          class_attribute :options
           self.options = []
         end
       end
@@ -131,7 +131,7 @@ module Restful
       # will be raised.
       #
       # Empty container options and defaulted options are skipped.
-      def deep_merge!(other)
+      def deeper_merge!(other)
         other_hash = case other
           when Configurable then other.to_hash(:ignore_empty => true, :skip_defaults => true)
           else other
@@ -139,7 +139,7 @@ module Restful
 
         hash = to_hash(:ignore_empty => true, :skip_defaults => true)
         new_configurable = self.class.new
-        hash._rs_deep_merge!(other_hash)
+        hash.deeper_merge!(other_hash)
         return new_configurable.set(hash)
       end
 
@@ -310,6 +310,7 @@ module Restful
     #
     # Resources configurations are set with a call to +register_resource+.
     class WebService < Configurator
+      self.options = []
       option :name
       option :api_prefix
       option :default_url_options, :type => :hash
@@ -368,6 +369,7 @@ module Restful
     #   options specifically set for the class will be used.  Default false.
     #
     class Resource < Configurator
+      self.options = []
       option :name_method, :default => :name
       option :url_for
       option :associations, :type => :hash
@@ -399,6 +401,7 @@ module Restful
     #
     # See ActiveRecord::Serialization.to_json for more details
     class ARSerialization < Configurator
+      self.options = []
       option :only, :type => :array
       option :except, :type => :array 
       option :include, :type => :hash, :element_type => 'Restful::Configuration::ARSerialization'

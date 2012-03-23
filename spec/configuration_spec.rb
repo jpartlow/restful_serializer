@@ -148,7 +148,7 @@ describe Restful::Configuration do
       end  
   
       it "should provide a deep merge" do
-        merged = @test.deep_merge!(@different)
+        merged = @test.deeper_merge!(@different)
         merged.name.should == @different.name
         merged.subs[:sub1].should == @sub1
         merged.subs[:sub2].stuff.should == @sub2.stuff + @difsub2.stuff
@@ -157,9 +157,9 @@ describe Restful::Configuration do
       end
 
       it "should raise errors if attempt to deep merge with different options" do
-        @test.deep_merge!(nil).should == @test
-        lambda { @test.deep_merge!(@sub1) }.should raise_error(ArgumentError)
-        lambda { @test.deep_merge!(:frotz => :spaniel) }.should raise_error(ArgumentError)
+        @test.deeper_merge!(nil).should == @test
+        lambda { @test.deeper_merge!(@sub1) }.should raise_error(ArgumentError)
+        lambda { @test.deeper_merge!(:frotz => :spaniel) }.should raise_error(ArgumentError)
       end
 
     end
